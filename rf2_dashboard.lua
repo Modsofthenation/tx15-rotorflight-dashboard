@@ -21,7 +21,7 @@ local flightData = {
     minBEC = 0
 }
 local flightCount = 0
-local showFlightSummary = true
+local showFlightSummary = false
 local timerTipsNum = 0
 local gov_state_names = { "OFF", "IDLE", "SPOOLUP", "RECOVERY", "ACTIVE", "THR-OFF", "LOST-HS", "AUTOROT", "BAILOUT" }
 
@@ -507,12 +507,18 @@ end
 local function refresh(wgt, event, touchState)
     if (wgt == nil) then return end
 
+    -- Handle return button press to dismiss flight summary
+    if showFlightSummary and event == EVT_EXIT_BREAK then
+        showFlightSummary = false
+        return
+    end
+
     -- Handle touch events for flight summary
     if showFlightSummary and touchState and touchState.x and touchState.y then
         local modalW = 300
         local modalH = 200
         local modalX = (LCD_W - modalW) / 2
-        local modalY = (LCD_H - modalH) / 2
+        local modalY = (LCD_H - modalH) / 2 - 40  -- Add the -40 offset to match UI positioning
         
         -- Check if touch is on close button
         local closeButtonW = 20
