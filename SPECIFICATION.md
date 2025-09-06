@@ -44,9 +44,25 @@ The widget follows EdgeTX's standard widget architecture with these key function
 | `RxBt`/`Vbat` | Battery voltage | Total battery voltage | `Vbat` | 22.2V |
 | `Cels`/`Vcel` | Cell voltage | Lowest cell voltage | `Vcel` | 3.66V |
 | `Curr` | Current consumption | Max current tracking | None | 0A |
-| `FM` | Flight mode | Armed status & mode display | `1RST` | 0 |
+| `RTE#` | Flight mode (FC reported) | Flight mode display | None | 0 |
+| `ARM` | Flight mode (TX) | Armed status | `1RST` | 0 |
 | `RSSI` | Signal strength | Connection quality | `1RSS`, `2RSS` | 0 |
 | `Cnsp`/`Capa` | Capacity used | mAh consumption | `Capa` | 0 |
+
+### Flight Mode Display
+
+The flight mode is now sourced from the `RTE#` telemetry sensor, which reports the actual flight mode as determined by the flight controller. This provides more accurate mode information compared to transmitter-side mode detection.
+
+**Mode Mapping:**
+- `RTE#` value 1 → "Flight profile/rate 1"
+- `RTE#` value 2 → "Flight profile/rate 2" 
+- `RTE#` value 3 → "Flight profile/rate 3"
+
+**Benefits:**
+- More accurate flight mode reporting
+- Reflects actual flight controller state
+- Better synchronization with flight controller behavior
+- Reduces discrepancies between TX and FC mode states
 
 ### Calculated Values
 

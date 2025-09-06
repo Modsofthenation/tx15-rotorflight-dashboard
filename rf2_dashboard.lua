@@ -166,7 +166,7 @@ build_ui_fancy = function(wgt)
             elseif pct <= 40 then return YELLOW
             else return txtColor end
         end},
-        {label="Mode", value=function() return wgt.values.flight_mode end, color=txtColor},
+        {label="Flight Mode", value=function() return wgt.values.flight_mode end, color=txtColor},
         {label="RSSI", value=function() return string.format("%ddB", wgt.values.rssi) end, color=function() 
             local rssi = wgt.values.rssi
             if rssi < -100 then return RED
@@ -256,14 +256,8 @@ local function updateBottomBarTelemetry(wgt)
         wgt.values.batt_percent = 0
     end
 
-    -- Flight mode - Get the actual flight mode name
-    local fmValue = getValue("FM") or 0
-    local fmModes = {"ACRO", "LEVEL", "HORI", "RESCUE", "ANGLE", "GPS", "RTH"}
-    if fmValue >= 0 and fmValue < #fmModes then
-        wgt.values.flight_mode = fmModes[fmValue + 1]
-    else
-        wgt.values.flight_mode = "UNK"
-    end
+    -- Flight mode - Get from RTE# sensor (flight controller reported mode)
+    wgt.values.flight_mode = getValue("RTE#") or 1
 
     -- RSSI - Get from ELRS telemetry
     local rssi = getValue("RSSI") or getValue("1RSS") or getValue("2RSS") or 0
@@ -320,7 +314,7 @@ local function resetWidgetValues(wgt)
         min_volt = 0,
         batt_percent = 0,
         armed = false,
-        flight_mode = "UNK",
+        flight_mode = 1,
         rssi = 0,
         usedCapacity = 0,
         img_last_name = "---",
