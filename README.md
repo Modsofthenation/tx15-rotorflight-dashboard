@@ -5,4 +5,5 @@ An extended version of [rf2_widget_dash](https://github.com/nhutlv01/rf2_widget_
 ## Installation
 
 1. Clone or download this repository.
-2. Copy the folder into your TX15's SD card under the `WIDGETS` directory:
+2. Chuck the files into a folder called "rf2_dashboard"
+2. Copy the folder into your TX15's SD card under the `WIDGETS` directory and then add the widget on a fullscreen view.
