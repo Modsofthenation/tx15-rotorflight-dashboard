@@ -243,9 +243,10 @@ local function updateBottomBarTelemetry(wgt)
         wgt.values.min_volt = minVolt
     end
 
-    -- Armed status - Use flight mode or FM sensor
-    local flightMode = getValue("FM") or getValue("1RST") or 0
-    wgt.values.armed = flightMode > 0
+    -- Armed status - Use ARM sensor with fallback to 1RST
+    local armValue = getValue("ARM") or getValue("1RST") or 0
+    -- TODO: Fix this
+    wgt.values.armed = armValue > 0
 
     -- Battery percentage - Calculate from cell voltage
     local cellVolt = getValue("Cels") or 0
