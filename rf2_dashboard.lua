@@ -164,7 +164,7 @@ build_ui_fancy = function(wgt)
     bNoConn:image({x=30, y=15, w=90, h=90, file=baseDir.."img/no_connection_wr.png"})
 
     -- Governor state display
-    pMain:label({text=function() return wgt.values.gov_state or "UNKNOWN" end, x=310, y=170, font=FS.FONT_8, color=txtColor})
+    -- pMain:label({text=function() return wgt.values.gov_state or "UNKNOWN" end, x=310, y=170, font=FS.FONT_8, color=txtColor})
 
     -- Flight summary modal overlay - full screen backdrop
     local bFlightSummaryBackdrop = lvgl.box({x=0, y=0, visible=function() return showFlightSummary end})
@@ -217,31 +217,36 @@ build_ui_fancy = function(wgt)
 
     -- Bottom bar sections
     local sections = {
-        {label="Min V", value=function() return string.format("%.2fv", wgt.values.min_volt) end, color=function() return wgt.values.min_volt < 3.3 and RED or txtColor end},
-        {label="Status", value=function() return wgt.values.armed and "ARM" or "DISARM" end, color=function() return wgt.values.armed and GREEN or RED end},
+        {label="Min V", value=function() return string.format("%.2fv", wgt.values.min_volt) end, color=function() return wgt.values.min_volt < 3.3 and RED or txtColor end, weight=1},
+        {label="Status", value=function() return wgt.values.armed and "ARM" or "DISARM" end, color=function() return wgt.values.armed and GREEN or RED end, weight=2},
         {label="Batt %", value=function() return string.format("%d%%", wgt.values.batt_percent) end, color=function() 
             local pct = wgt.values.batt_percent
             if pct <= 20 then return RED
             elseif pct <= 40 then return YELLOW
             else return txtColor end
-        end},
-        {label="Flight Mode", value=function() return wgt.values.flight_mode end, color=txtColor},
+        end, weight=1},
+        {label="Flight Mode", value=function() return wgt.values.flight_mode end, color=txtColor, weight=1},
         {label="RSSI", value=function() return string.format("%ddB", wgt.values.rssi) end, color=function() 
             local rssi = wgt.values.rssi
             if rssi < -100 then return RED
             elseif rssi < -90 then return YELLOW
             else return GREEN end
-        end},
-        {label="mAh", value=function() return string.format("%d", wgt.values.usedCapacity) end, color=txtColor},
+        end, weight=1},
+        {label="mAh", value=function() return string.format("%d", wgt.values.usedCapacity) end, color=txtColor, weight=1},
     }
 
-    local numSections = #sections
-    local spacing = math.floor(zoneW / numSections)
+    local totalWeight = 0
+    for _, sec in ipairs(sections) do
+        totalWeight = totalWeight + (sec.weight or 1)
+    end
 
+    local xPos = 5
     for i, sec in ipairs(sections) do
-        local secBox = bBottomBar:box({x=(i-1)*spacing + 5, y=5})
+        local colW = math.floor((zoneW - 10) * ((sec.weight or 1) / totalWeight))
+        local secBox = bBottomBar:box({x=xPos, y=5})
         secBox:label({text=sec.label, x=0, y=0, font=FS.FONT_6, color=titleGreyColor})
         secBox:label({text=sec.value, x=0, y=12, font=FS.FONT_12, color=sec.color})
+        xPos = xPos + colW
     end
 end
 
@@ -320,8 +325,8 @@ local function updateBottomBarTelemetry(wgt)
     wgt.values.flight_mode = getValue("RTE#") or 1
 
     -- Governor state - Get from GOV sensor
-    local govState = getValue("GOV") or 1
-    wgt.values.gov_state = gov_state_names[govState] or "UNKNOWN"
+    -- local govState = getValue("GOV") or 1
+    -- wgt.values.gov_state = gov_state_names[govState] or "UNKNOWN"
 
     -- RSSI - Get from ELRS telemetry
     local rssi = getValue("RSSI") or getValue("1RSS") or getValue("2RSS") or 0
