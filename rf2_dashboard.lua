@@ -225,7 +225,7 @@ build_ui_fancy = function(wgt)
             elseif pct <= 40 then return YELLOW
             else return txtColor end
         end, weight=1},
-        {label="Flight Mode", value=function() return wgt.values.flight_mode end, color=txtColor, weight=1},
+        {label="FM", value=function() return wgt.values.flight_mode end, color=txtColor, weight=1},
         {label="RSSI", value=function() return string.format("%ddB", wgt.values.rssi) end, color=function() 
             local rssi = wgt.values.rssi
             if rssi < -100 then return RED
@@ -268,30 +268,29 @@ local function updateRpm(wgt)
 end
 
 local function updateCell(wgt)
-    local vbat = getValue("RxBt") or getValue("Vbat")  -- Main battery voltage
-    local vcel = getValue("Cels") or getValue("Vcel")  -- Cell voltage (lowest cell)
+    local vbat = getValue("Vbat") or getValue("RxBt") or 0  -- Pack voltage per CSV
+    local batpct = getValue("Bat%")
 
     if inSimu then
         vbat = 22.2
-        vcel = 3.66
     end
 
-    -- Calculate cell percentage based on single cell voltage
-    local cellPercent = 0
-    if vcel and vcel > 0 then
-        -- Standard LiPo voltage range: 3.0V (0%) to 4.2V (100%)
-        cellPercent = math.max(0, math.min(100, ((vcel - 3.0) / 1.2) * 100))
+    -- Prefer telemetry-provided battery percentage
+    if batpct ~= nil then
+        wgt.values.cell_percent = math.max(0, math.min(100, math.floor(batpct)))
+    else
+        -- Keep prior value if not available; avoid guessing cells
+        wgt.values.cell_percent = wgt.values.cell_percent or 0
     end
 
     wgt.values.vbat = vbat or 0
-    wgt.values.vcel = vcel or 0
-    wgt.values.cell_percent = math.floor(cellPercent)
-    wgt.values.volt = (wgt.options.showTotalVoltage == 1) and (vbat or 0) or (vcel or 0)
-    wgt.values.cellColor = (vcel and vcel < 3.5) and RED or lcd.RGB(0x00963A) --GREEN
+    wgt.values.vcel = wgt.values.vcel or 0 -- legacy field retained
+    wgt.values.volt = vbat or 0
+    wgt.values.cellColor = (wgt.values.cell_percent <= 20) and RED or lcd.RGB(0x00963A)
 end
 
 local function updateCurr(wgt)
-    local curr = getValue("Curr") or 0
+    local curr = getValue("EscI") or getValue("Iesc") or getValue("Curr") or 0
     
     if curr > wgt.values.curr then
         wgt.values.curr = curr
@@ -301,22 +300,21 @@ local function updateCurr(wgt)
 end
 
 local function updateBottomBarTelemetry(wgt)
-    -- Min Voltage - Use Cels (lowest cell voltage)
-    local minVolt = getValue("Cels") or 0
+    -- Min Voltage - Use Vbat (pack voltage)
+    local minVolt = getValue("Vbat") or 0
     if minVolt > 0 and (wgt.values.min_volt == 0 or minVolt < wgt.values.min_volt) then
         wgt.values.min_volt = minVolt
         flightData.minVoltage = minVolt  -- Track for logging
     end
 
-    -- Armed status - Use ARM sensor with fallback to 1RST
-    local armValue = getValue("ARM") or getValue("1RST") or 0
+    -- Armed status - Use ARM sensor
+    local armValue = getValue("ARM") or 0
     wgt.values.armed = armValue > 0
 
-    -- Battery percentage - Calculate from cell voltage
-    local cellVolt = getValue("Cels") or 0
-    if cellVolt > 0 then
-        -- Standard LiPo voltage range: 3.0V (0%) to 4.2V (100%)
-        wgt.values.batt_percent = math.max(0, math.min(100, math.floor(((cellVolt - 3.0) / 1.2) * 100)))
+    -- Battery percentage - Prefer Bat% from telemetry
+    local batpct = getValue("Bat%")
+    if batpct ~= nil then
+        wgt.values.batt_percent = math.max(0, math.min(100, math.floor(batpct)))
     else
         wgt.values.batt_percent = 0
     end
@@ -328,17 +326,17 @@ local function updateBottomBarTelemetry(wgt)
     -- local govState = getValue("GOV") or 1
     -- wgt.values.gov_state = gov_state_names[govState] or "UNKNOWN"
 
-    -- RSSI - Get from ELRS telemetry
-    local rssi = getValue("RSSI") or getValue("1RSS") or getValue("2RSS") or 0
+    -- RSSI - Prefer TRSS, fallback to per-antenna
+    local rssi = getValue("TRSS") or getValue("1RSS") or getValue("2RSS") or 0
     wgt.values.rssi = rssi
 
-    -- Used capacity (mAh) - Get from current consumption
-    local usedMah = getValue("Cnsp") or getValue("Capa") or 0
+    -- Used capacity (mAh) - Capa from CSV
+    local usedMah = getValue("Capa") or 0
     wgt.values.usedCapacity = usedMah
     flightData.usedCapacity = usedMah  -- Track for logging
 
     -- Track maximum values for flight logging
-    local current = getValue("Curr") or 0
+    local current = getValue("EscI") or getValue("Iesc") or getValue("Curr") or 0
     if current > flightData.maxCurrent then
         flightData.maxCurrent = current
     end
@@ -348,8 +346,8 @@ local function updateBottomBarTelemetry(wgt)
         flightData.maxRPM = rpm
     end
 
-    -- Calculate max power
-    local vbat = getValue("RxBt") or getValue("Vbat") or 0
+    -- Calculate max power from Vbat * current
+    local vbat = getValue("Vbat") or 0
     local maxPow = vbat * current
     if maxPow > flightData.maxPower then
         flightData.maxPower = math.floor(maxPow)
